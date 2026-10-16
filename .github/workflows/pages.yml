@@ -34,3 +34,15 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+  indexnow:
+    # Ping IndexNow (Bing/Yandex/Seznam/Naver) with the live sitemap after each deploy. Key is public, no secrets.
+    needs: deploy
+    if: success()  # also runs on the weekly cron (new RVO list = new URLs)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/indexnow.mjs
