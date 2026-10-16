@@ -4,7 +4,7 @@ const SITE = 'https://cerberostech.github.io/isde-checker';
 const BASE = '/isde-checker';
 const RVO_PAGE = 'https://www.rvo.nl/subsidies-financiering/isde/meldcodelijsten';
 const RVO_LIST = 'https://www.rvo.nl/subsidies-financiering/isde/meldcodelijsten/warmtepompen';
-const ANALYTICS = ''; // GoatCounter-style slot: e.g. '<script data-goatcounter="https://X.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
+const ANALYTICS = '<script data-goatcounter="https://isde-checker.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'; // GoatCounter slot
 const OUT = 'dist';
 
 // ---------- minimal xlsx reader ----------
@@ -84,9 +84,9 @@ const srcLine = `Bron: <a href="${RVO_LIST}" rel="noopener">RVO ISDE Meldcodelij
 const cta = `<aside class="cta"><h2>Offertes aanvragen?</h2><p>Binnenkort kun je hier vrijblijvend offertes van erkende installateurs vergelijken. Tot die tijd: vraag minimaal drie offertes aan en controleer of de meldcode op de offerte staat.</p></aside>`;
 const page = (title, desc, rel, body) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}/${rel}">
-<link rel="stylesheet" href="${BASE}/style.css">${ANALYTICS}</head><body>
+<link rel="stylesheet" href="${BASE}/style.css"></head><body>
 <header><a class="logo" href="${BASE}/">ISDE-checker</a><nav><a href="${BASE}/">Zoeken</a><a href="${BASE}/merken/">Merken</a><a href="${BASE}/subsidie-uitleg/">Hoeveel subsidie?</a><a href="${BASE}/disclosure/">Over &amp; disclosure</a></nav></header>
-<main>${body}</main><footer><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid. <a href="${BASE}/disclosure/">Disclosure</a></p></footer></body></html>`;
+<main>${body}</main><footer><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid. <a href="${BASE}/disclosure/">Disclosure</a></p></footer>${ANALYTICS}</body></html>`;
 const table = list => `<table><thead><tr><th>Merk</th><th>Model</th><th>Meldcode</th><th>kW</th><th>Subsidie</th></tr></thead><tbody>${list.map(p => `<tr><td>${esc(p.brand)}</td><td><a href="${BASE}/warmtepomp/${p.slug}/">${esc(p.model)}</a></td><td><code>${esc(p.code)}</code></td><td>${p.kw ?? ''}</td><td>${fmt(p.sub)}</td></tr>`).join('')}</tbody></table>`;
 
 fs.rmSync(OUT, { recursive: true, force: true });
@@ -94,6 +94,8 @@ const write = (rel, html) => { const f = path.join(OUT, rel); fs.mkdirSync(path.
 fs.cpSync('src', OUT, { recursive: true });
 write('products.json', JSON.stringify({ source: src, month: monthName, products: products.map(p => [p.brand, p.model, p.code, p.kw, p.sub, p.slug, p.cat]) }));
 write('.nojekyll', '');
+// Never remove: Google Search Console HTML verification file (exact content required).
+write('google8042a96498438aa5.html', 'google-site-verification: google8042a96498438aa5.html');
 
 write('index.html', page('ISDE subsidie warmtepomp checken – staat jouw warmtepomp op de meldcodelijst?', `Zoek op merk of model en zie direct of je warmtepomp op de ISDE-meldcodelijst staat, met meldcode en subsidiebedrag. ${products.length} warmtepompen.`, '',
 `<h1>Staat jouw warmtepomp op de ISDE-lijst?</h1><p>Zoek op merk, model of meldcode in ${products.length.toLocaleString('nl-NL')} goedgekeurde warmtepompen van ${brands.length} merken.</p>
