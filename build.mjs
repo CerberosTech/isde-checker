@@ -80,14 +80,65 @@ const brands = [...new Set(products.map(p => p.brand))].sort((a, b) => a.localeC
 console.log(`${products.length} products, ${brands.length} brands, source ${src.url} (${src.fetched})`);
 
 // ---------- templates ----------
-const srcLine = `Bron: <a href="${RVO_LIST}" rel="noopener">RVO ISDE Meldcodelijst Warmtepompen</a>${monthName ? ' – ' + esc(monthName) : ''} (opgehaald ${esc(src.fetched)}). Aan deze gegevens kunnen geen rechten worden ontleend; controleer altijd bij RVO.`;
-const cta = `<aside class="cta"><h2>Offertes aanvragen?</h2><p>Binnenkort kun je hier vrijblijvend offertes van erkende installateurs vergelijken. Tot die tijd: vraag minimaal drie offertes aan en controleer of de meldcode op de offerte staat.</p></aside>`;
-const page = (title, desc, rel, body) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}/${rel}">
-<link rel="stylesheet" href="${BASE}/style.css"></head><body>
-<header><a class="logo" href="${BASE}/">ISDE-checker</a><nav><a href="${BASE}/">Zoeken</a><a href="${BASE}/merken/">Merken</a><a href="${BASE}/subsidie-uitleg/">Hoeveel subsidie?</a><a href="${BASE}/disclosure/">Over &amp; disclosure</a></nav></header>
-<main>${body}</main><footer><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid. <a href="${BASE}/disclosure/">Disclosure</a></p></footer>${ANALYTICS}</body></html>`;
-const table = list => `<table><thead><tr><th>Merk</th><th>Model</th><th>Meldcode</th><th>kW</th><th>Subsidie</th></tr></thead><tbody>${list.map(p => `<tr><td>${esc(p.brand)}</td><td><a href="${BASE}/warmtepomp/${p.slug}/">${esc(p.model)}</a></td><td><code>${esc(p.code)}</code></td><td>${p.kw ?? ''}</td><td>${fmt(p.sub)}</td></tr>`).join('')}</tbody></table>`;
+const OG_IMAGE = `${SITE}/og-image.png`;
+const OG_ALT = 'ISDE-checker: Staat jouw warmtepomp op de ISDE-lijst?';
+const THEME = '#0F3D2E';
+const nl = n => n.toLocaleString('nl-NL');
+const count = (n, one, many) => `${nl(n)} ${n === 1 ? one : many}`;
+const fetchedAt = new Date(`${src.fetched}T00:00:00Z`);
+const fetchedLong = isNaN(fetchedAt) ? String(src.fetched) : fetchedAt.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const when = `<time datetime="${esc(src.fetched)}">${esc(fetchedLong)}</time>`;
+const listMonth = monthName ? monthName[0].toLowerCase() + monthName.slice(1) : '';
+const listName = listMonth ? `de ISDE-meldcodelijst van ${esc(listMonth)}` : 'de ISDE-meldcodelijst';
+const srcLine = `Bron: <a href="${RVO_LIST}" rel="noopener">RVO ISDE Meldcodelijst Warmtepompen</a>${monthName ? ' – ' + esc(monthName) : ''} (opgehaald ${when}). Aan deze gegevens kunnen geen rechten worden ontleend; controleer altijd bij RVO.`;
+
+// <title> (max 60) and meta description (max 155): use the first option that fits, else shorten at a word.
+const squash = s => String(s).replace(/[^\S ]+/g, ' ').trim();
+const clip = (s, max) => { s = squash(s); if (s.length <= max) return s; const cut = s.slice(0, max - 1), at = cut.lastIndexOf(' '); return (at > max / 2 ? cut.slice(0, at) : cut).replace(/[\s,.;:/(+–-]+$/, '') + '…'; };
+const fit = (max, ...options) => options.map(squash).find(o => o.length <= max) ?? clip(options.at(-1), max);
+const fill = (max, tpl, part) => fit(max, tpl.replace('{}', part), tpl.replace('{}', clip(part, Math.max(8, max - squash(tpl).length + 2))));
+const productTitle = p => { const name = `${squash(p.brand)} ${squash(p.model)}`;
+  return fit(60, `ISDE-subsidie ${name} – ${p.code}`, `ISDE ${name} – ${p.code}`, fill(60, `ISDE {} – ${p.code}`, name)); };
+const productDesc = p => { const name = `${squash(p.brand)} ${squash(p.model)}`, facts = `staat op ${listName}: meldcode ${p.code}, indicatief subsidiebedrag ${fmt(p.sub)}.`;
+  return fit(155, `${name} ${facts} Met type, vermogen en koudemiddel.`, `${name} ${facts}`, fill(155, `{} ${facts}`, name)); };
+const brandTitle = b => fit(60, `ISDE-subsidie ${b} warmtepomp: meldcodes en bedragen`, `ISDE-subsidie ${b} warmtepomp – meldcodes`, `ISDE-subsidie ${b} warmtepomp`, fill(60, 'ISDE-subsidie {}', b));
+const brandDesc = (b, n, range) => { const what = n === 1 ? `De warmtepomp van ${b} op ${listName}, met meldcode en subsidiebedrag` : `Alle ${nl(n)} warmtepompen van ${b} op ${listName}, met meldcode en subsidiebedrag per model`;
+  return fit(155, `${what}${range ? ` (${range})` : ''}.`, `${what}.`, fill(155, `Alle warmtepompen van {} op ${listName}, met meldcode en subsidiebedrag.`, b)); };
+
+const NAV = [['', 'Zoeken'], ['merken/', 'Merken'], ['subsidie-uitleg/', 'Uitleg'], ['disclosure/', 'Over']];
+const page = (title, desc, rel, body, { cls = '', robots = '' } = {}) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}/${rel}">${robots ? `<meta name="robots" content="${robots}">` : ''}
+<meta name="theme-color" content="${THEME}"><meta name="color-scheme" content="light">
+<link rel="icon" href="${BASE}/favicon.ico" sizes="32x32"><link rel="icon" href="${BASE}/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="${BASE}/apple-touch-icon.png">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ISDE-checker"><meta property="og:locale" content="nl_NL">
+<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}/${rel}">
+<meta property="og:image" content="${OG_IMAGE}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${esc(OG_ALT)}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="${BASE}/style.css"></head><body${cls ? ` class="${cls}"` : ''}>
+<a class="skip" href="#main">Naar de inhoud</a>
+<header class="site-head"><div class="wrap"><a class="brand" href="${BASE}/"><img src="${BASE}/logo.svg" alt="" width="36" height="36">ISDE-checker</a>
+<nav class="site-nav" aria-label="Hoofdmenu"><ul>${NAV.map(([href, label]) => `<li><a href="${BASE}/${href}"${href === rel ? ' aria-current="page"' : ''}>${label}</a></li>`).join('')}</ul></nav></div></header>
+<main id="main" tabindex="-1">${body}</main>
+<footer class="site-foot"><div class="wrap"><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid.</p>
+<ul class="foot-nav"><li><a href="${BASE}/merken/">Alle merken</a></li><li><a href="${BASE}/subsidie-uitleg/">Uitleg subsidie</a></li><li><a href="${BASE}/disclosure/">Over deze site en disclosure</a></li></ul></div></footer>${ANALYTICS}</body></html>`;
+
+// A list of models: the model name (with type and kW) links to the product page; meldcode as a plate; amount.
+// Brand pages group the tables by type, so there the line under the model only gives the kW.
+const typeLine = (p, withType) => [withType ? p.cat : '', p.kw ? `${nl(p.kw)} kW` : ''].filter(Boolean).join(', ');
+const row = (p, withBrand) => { const x = typeLine(p, withBrand); return `<tr><td class="m"><a href="${BASE}/warmtepomp/${p.slug}/">${withBrand ? `<span class="b">${esc(p.brand)}</span>` : ''}<span class="n">${esc(p.model)}</span>${x ? `<span class="x">${esc(x)}</span>` : ''}</a></td><td class="c"><span class="plate">${esc(p.code)}</span></td><td class="s">${fmt(p.sub)}</td></tr>`; };
+const table = (list, { withBrand = false, label = '' } = {}) => `<table class="list"${label ? ` aria-labelledby="${label}"` : ''}><thead><tr><th scope="col">${withBrand ? 'Merk en model' : 'Model'}</th><th scope="col">Meldcode</th><th scope="col">Subsidie</th></tr></thead><tbody>${list.map(p => row(p, withBrand)).join('')}</tbody></table>`;
+const miniSearch = (id, label) => `<form class="search search-mini" action="${BASE}/" method="get" role="search"><label for="${id}">${label}</label><div class="field"><input id="${id}" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Merk of model"><button type="submit">Zoeken</button></div></form>`;
+const ICON_OK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="currentColor"/><path d="M6.8 12.4l3.4 3.4 7-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_BAND = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const COPY = `<script>(()=>{const b=document.querySelector('[data-copy]');if(!b||!navigator.clipboard)return;const s=b.nextElementSibling,t=b.textContent;let k;b.hidden=false;b.addEventListener('click',()=>navigator.clipboard.writeText(b.dataset.copy).then(()=>{b.textContent='Gekopieerd';s.textContent='Meldcode '+b.dataset.copy+' gekopieerd';clearTimeout(k);k=setTimeout(()=>{b.textContent=t;s.textContent=''},2500)},()=>{}))})()</script>`;
+
+const byModel = new Intl.Collator('nl', { numeric: true, sensitivity: 'base' });
+const TYPES = ['Lucht-Water', 'Grond-Water', 'Water-Water', 'Warmtepompboiler'];
+const typeRank = c => { const i = TYPES.indexOf(c); return i < 0 ? TYPES.length : i; };
+const byType = list => { const m = new Map(); for (const p of [...list].sort((a, b) => byModel.compare(a.model, b.model))) { const k = p.cat || 'Overig'; if (!m.has(k)) m.set(k, []); m.get(k).push(p); }
+  return [...m].sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || a[0].localeCompare(b[0], 'nl')); };
+const span = list => { const s = list.map(p => p.sub).filter(n => n != null); return s.length ? [Math.min(...s), Math.max(...s)] : null; };
+const perBrand = new Map(brands.map(b => [b, products.filter(p => p.brand === b)]));
 
 fs.rmSync(OUT, { recursive: true, force: true });
 const write = (rel, html) => { const f = path.join(OUT, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, html); };
@@ -97,44 +148,122 @@ write('.nojekyll', '');
 // Never remove: Google Search Console HTML verification file (exact content required).
 write('google8042a96498438aa5.html', 'google-site-verification: google8042a96498438aa5.html');
 
-write('index.html', page('ISDE subsidie warmtepomp checken – staat jouw warmtepomp op de meldcodelijst?', `Zoek op merk of model en zie direct of je warmtepomp op de ISDE-meldcodelijst staat, met meldcode en subsidiebedrag. ${products.length} warmtepompen.`, '',
-`<h1>Staat jouw warmtepomp op de ISDE-lijst?</h1><p>Zoek op merk, model of meldcode in ${products.length.toLocaleString('nl-NL')} goedgekeurde warmtepompen van ${brands.length} merken.</p>
-<input id="q" type="search" placeholder="Bijv. Daikin Altherma, NIBE F2120 of KA12345" autocomplete="off" autofocus><p id="count" class="muted"></p><div id="results"></div>
-<noscript><p>Zonder JavaScript: bekijk de <a href="${BASE}/merken/">lijst per merk</a>.</p></noscript>${cta}
-<script>window.BASE=${JSON.stringify(BASE)}</script><script src="${BASE}/search.js" defer></script>`));
+// Homepage examples: only searches that find something on the current list (same matching as search.js).
+const norm = s => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const hay = products.map(p => norm(`${p.brand} ${p.model} ${p.code}`) + ' ' + norm(p.model).replace(/ /g, ''));
+const finds = q => { const t = norm(q).split(' '); return hay.some(h => t.every(w => h.includes(w))); };
+const examples = [...['Quatt', 'NIBE F2120', 'Remeha Elga', 'Intergas Xtend', 'Vaillant aroTHERM', 'Bosch Compress'].filter(finds).slice(0, 2), products[0].code];
+const hint = examples.slice(0, -1).filter(x => x.length <= 16).at(-1) || examples[0]; // short enough for the input at 360 px
+const top = [...perBrand].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'nl')).slice(0, 12).map(([b]) => b);
+const brandItem = b => { const n = perBrand.get(b).length; return `<li><a href="${BASE}/merk/${slug(b)}/">${esc(b)} <span class="num">${nl(n)}<span class="vh"> ${n === 1 ? 'model' : 'modellen'}</span></span></a></li>`; };
 
-write('merken/index.html', page('ISDE subsidie warmtepompen per merk', 'Alle warmtepompmerken op de ISDE-meldcodelijst van RVO.', 'merken/',
-`<h1>Warmtepompen per merk</h1><ul class="cols">${brands.map(b => `<li><a href="${BASE}/merk/${slug(b)}/">${esc(b)}</a> <span class="muted">(${products.filter(p => p.brand === b).length})</span></li>`).join('')}</ul>`));
-for (const b of brands) { const list = products.filter(p => p.brand === b);
-  write(`merk/${slug(b)}/index.html`, page(`ISDE subsidie ${b} warmtepomp – meldcodes en bedragen`, `${list.length} ${b} warmtepompen op de ISDE-meldcodelijst, met meldcode en subsidiebedrag.`, `merk/${slug(b)}/`,
-  `<h1>ISDE subsidie ${esc(b)}</h1><p>${list.length} modellen van ${esc(b)} staan op de ISDE-meldcodelijst.</p>${table(list)}${cta}`)); }
-for (const p of products) {
-  write(`warmtepomp/${p.slug}/index.html`, page(`ISDE subsidie ${p.brand} ${p.model} – meldcode ${p.code}`, `${p.brand} ${p.model} staat op de ISDE-meldcodelijst: meldcode ${p.code}, indicatief subsidiebedrag ${fmt(p.sub)}.`, `warmtepomp/${p.slug}/`,
-  `<p class="crumbs"><a href="${BASE}/merk/${slug(p.brand)}/">${esc(p.brand)}</a> ›</p><h1>ISDE subsidie ${esc(p.brand)} ${esc(p.model)}</h1>
-<p class="ok">✔ Staat op de ISDE-meldcodelijst warmtepompen</p>
-<dl><dt>Meldcode</dt><dd><code>${esc(p.code)}</code></dd><dt>Indicatief subsidiebedrag</dt><dd>${fmt(p.sub)}</dd><dt>Bedrag 2e warmtepomp</dt><dd>${fmt(p.sub2)}</dd><dt>Vermogen</dt><dd>${p.kw ?? '–'} kW</dd><dt>Type</dt><dd>${esc(p.cat)}</dd><dt>Koudemiddel</dt><dd>${esc(p.gas)} (GWP ${esc(p.gwp)})</dd></dl>
-<p>Vermeld de meldcode <code>${esc(p.code)}</code> in je ISDE-aanvraag bij RVO. Het bedrag is indicatief; RVO stelt de definitieve subsidie vast. <a href="${BASE}/subsidie-uitleg/">Hoe werkt de subsidie?</a></p>${cta}`)); }
+write('index.html', page('ISDE-subsidie warmtepomp checken – meldcode en bedrag', `Staat je warmtepomp op de ISDE-meldcodelijst van RVO? Zoek op merk, model of meldcode en zie direct de meldcode en het subsidiebedrag.`, '',
+`<section class="hero"><div class="wrap">
+<h1>Staat jouw warmtepomp op de ISDE-lijst?</h1>
+<p class="lead">Zoek tussen ${nl(products.length)} goedgekeurde warmtepompen van ${brands.length} merken. Je ziet direct de meldcode en het subsidiebedrag.</p>
+<form id="zoek" class="search" action="${BASE}/" method="get" role="search"><label for="q">Zoek op merk, model of meldcode</label>
+<div class="field"><input id="q" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Bijv. ${esc(hint)}"><button type="submit">Zoeken</button></div></form>
+<p class="try">Probeer: ${examples.map(x => `<a href="${BASE}/?q=${encodeURIComponent(x)}" data-q="${esc(x)}">${esc(x)}</a>`).join(' ')}</p>
+<p class="stamp">Bron: RVO-meldcodelijst${listMonth ? ` van ${esc(listMonth)}` : ''}, opgehaald op ${when}.</p>
+</div></section>
+<div class="wrap">
+<section class="results" aria-label="Zoekresultaten"><p id="count" class="count" role="status"></p><div id="results"></div>
+<noscript><p>Zoeken werkt met JavaScript. Zonder JavaScript vind je alle modellen via de <a href="${BASE}/merken/">lijst per merk</a>.</p></noscript></section>
+<div class="info">
+<section><h2>Zo gebruik je de meldcode</h2><ol class="steps"><li>Zoek je warmtepomp op merk, model of meldcode.</li><li>Open het model. Je ziet de meldcode en het subsidiebedrag.</li><li>Vul na de installatie de meldcode in bij je ISDE-aanvraag op rvo.nl.</li></ol></section>
+<section><h2>Waar vind je het model?</h2><ul class="dots"><li>Op de offerte of factuur van je installateur.</li><li>Op het typeplaatje van de warmtepomp.</li><li>In de handleiding.</li></ul><p>Vind je niets op de hele naam? Zoek dan op een deel van de typecode. Hoofdletters, spaties en streepjes maken niet uit.</p></section>
+</div>
+<section class="top"><h2>Merken met de meeste modellen</h2><ul class="brands">${top.map(brandItem).join('')}</ul><p class="more"><a href="${BASE}/merken/">Alle ${brands.length} merken</a></p></section>
+</div>
+<script>window.BASE=${JSON.stringify(BASE)}</script><script src="${BASE}/search.js" defer></script>`, { cls: 'home' }));
 
-write('subsidie-uitleg/index.html', page('Hoeveel ISDE subsidie krijg ik voor een warmtepomp? – uitleg', 'Uitleg over de ISDE-subsidie voor warmtepompen: voorwaarden, bedragen en hoe je aanvraagt.', 'subsidie-uitleg/',
-`<h1>Hoeveel ISDE-subsidie krijg ik voor een warmtepomp?</h1>
-<p>De Investeringssubsidie duurzame energie en energiebesparing (ISDE) wordt uitgevoerd door RVO. Voor een warmtepomp hangt het bedrag af van het <strong>type</strong> (lucht-water, grond-water, water-water, hybride) en het <strong>thermisch vermogen</strong>. Elk goedgekeurd apparaat heeft een vast, indicatief bedrag op de meldcodelijst – dat bedrag zie je op deze site per model.</p>
-<h2>Belangrijkste voorwaarden (samengevat)</h2><ul>
+const letterOf = b => { const c = b.normalize('NFKD')[0].toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; };
+const letters = new Map(); for (const b of brands) { const l = letterOf(b); if (!letters.has(l)) letters.set(l, []); letters.get(l).push(b); }
+const letterId = l => `letter-${l === '#' ? 'overig' : l.toLowerCase()}`;
+write('merken/index.html', page('Alle warmtepompmerken op de ISDE-meldcodelijst', fit(155, `Alle ${brands.length} warmtepompmerken op ${listName}. Kies een merk en zie per model de meldcode en het subsidiebedrag.`, `Alle warmtepompmerken op ${listName}.`), 'merken/',
+`<div class="wrap">
+<h1>Alle merken op de ISDE-lijst</h1>
+<p class="lead">${brands.length} merken met samen ${nl(products.length)} warmtepompen op ${listName}. Kies een merk voor alle modellen, meldcodes en bedragen.</p>
+<nav class="az" aria-label="Merken per letter"><ul>${[...letters.keys()].map(l => `<li><a href="#${letterId(l)}">${l}</a></li>`).join('')}</ul></nav>
+${[...letters].map(([l, bs]) => `<section class="letter" aria-labelledby="${letterId(l)}"><h2 id="${letterId(l)}">${l}</h2><ul class="brands">${bs.map(brandItem).join('')}</ul></section>`).join('\n')}
+</div>`));
+
+for (const b of brands) { const list = perBrand.get(b), s = span(list), groups = byType(list);
+  const range = !s ? '' : s[0] === s[1] ? fmt(s[0]) : `${fmt(s[0])} tot ${fmt(s[1])}`;
+  write(`merk/${slug(b)}/index.html`, page(brandTitle(b), brandDesc(b, list.length, range), `merk/${slug(b)}/`,
+`<div class="wrap">
+<nav class="crumbs" aria-label="Kruimelpad"><ol><li><a href="${BASE}/merken/">Merken</a></li></ol></nav>
+<h1>ISDE-subsidie ${esc(b)}</h1>
+<p class="lead">${list.length === 1 ? `Eén model van ${esc(b)} staat` : `${nl(list.length)} modellen van ${esc(b)} staan`} op ${listName}.${!s ? '' : s[0] === s[1] ? ` Het indicatieve subsidiebedrag is ${fmt(s[0])}.` : ` Het indicatieve subsidiebedrag ligt tussen ${fmt(s[0])} en ${fmt(s[1])}.`}</p>
+${groups.length > 1 ? `<nav class="jump" aria-label="Soorten warmtepomp"><ul>${groups.map(([c, l]) => `<li><a href="#${slug(c)}">${esc(c)} <span class="num">${nl(l.length)}<span class="vh"> ${l.length === 1 ? 'model' : 'modellen'}</span></span></a></li>`).join('')}</ul></nav>` : ''}
+${groups.map(([c, l]) => `<section class="group"><h2 id="${slug(c)}">${esc(c)} <span class="count">${count(l.length, 'model', 'modellen')}</span></h2>${table(l, { label: slug(c) })}</section>`).join('\n')}
+${miniSearch('q2', 'Zoek een ander model')}
+</div>`)); }
+
+for (const p of products) { const bs = slug(p.brand), n = perBrand.get(p.brand).length;
+  write(`warmtepomp/${p.slug}/index.html`, page(productTitle(p), productDesc(p), `warmtepomp/${p.slug}/`,
+`<div class="wrap">
+<nav class="crumbs" aria-label="Kruimelpad"><ol><li><a href="${BASE}/merken/">Merken</a></li><li><a href="${BASE}/merk/${bs}/">${esc(p.brand)}</a></li></ol></nav>
+<h1>ISDE-subsidie ${esc(p.brand)} ${esc(p.model)}</h1>
+<p class="verdict">${ICON_OK}Staat op ${listName}</p>
+<dl class="answer">
+<div class="a-code"><dt>Meldcode</dt><dd><span class="plate plate-xl"><span class="band">${ICON_BAND}</span>${esc(p.code)}</span><button type="button" class="btn-copy" data-copy="${esc(p.code)}" hidden>Kopieer meldcode</button><span class="vh" role="status"></span></dd></div>
+<div class="a-sum"><dt>Indicatief subsidiebedrag</dt><dd class="amount">${fmt(p.sub)}</dd></div>
+</dl>
+<dl class="spec">
+<div><dt>Bedrag voor een 2e warmtepomp</dt><dd>${fmt(p.sub2)}</dd></div>
+<div><dt>Type</dt><dd>${esc(p.cat) || '–'}</dd></div>
+<div><dt>Vermogen</dt><dd>${p.kw == null ? '–' : `${nl(p.kw)} kW`}</dd></div>
+<div><dt>Koudemiddel</dt><dd>${esc(p.gas) || '–'}${p.gwp ? ` (GWP ${esc(p.gwp)})` : ''}</dd></div>
+</dl>
+${p.sub2 != null && p.sub2 !== p.sub ? '<p class="note">Het bedrag voor een 2e warmtepomp geldt als je twee lucht-waterwarmtepompen laat plaatsen, of als je al eerder subsidie kreeg voor een lucht-waterwarmtepomp.</p>' : ''}
+<p>Vul meldcode <strong>${esc(p.code)}</strong> in bij je ISDE-aanvraag bij RVO. Het bedrag is indicatief; RVO stelt de definitieve subsidie vast. <a href="${BASE}/subsidie-uitleg/">Zo werkt de subsidie</a></p>
+<p class="more"><a href="${BASE}/merk/${bs}/">${n === 1 ? `Alle modellen van ${esc(p.brand)}` : `Alle ${nl(n)} modellen van ${esc(p.brand)}`}</a></p>
+${miniSearch('q2', 'Zoek een ander model')}
+</div>${COPY}`)); }
+
+const typeRows = byType(products).map(([c, l]) => { const s = span(l); return `<tr><th scope="row">${esc(c)}<span class="x">${count(l.length, 'model', 'modellen')}</span></th><td>${!s ? '–' : s[0] === s[1] ? fmt(s[0]) : `${fmt(s[0])} tot ${fmt(s[1])}`}</td></tr>`; }).join('');
+write('subsidie-uitleg/index.html', page('Hoeveel ISDE-subsidie krijg je voor een warmtepomp?', 'Uitleg over de ISDE-subsidie voor warmtepompen: de bedragen per type, de voorwaarden en hoe je de subsidie aanvraagt.', 'subsidie-uitleg/',
+`<div class="wrap prose">
+<h1>Hoeveel ISDE-subsidie krijg ik voor een warmtepomp?</h1>
+<p class="lead">Dat hangt af van het model. Elk goedgekeurd model heeft op de meldcodelijst van RVO een vast, indicatief bedrag. Op deze site zie je dat bedrag per model.</p>
+<p>De Investeringssubsidie duurzame energie en energiebesparing (ISDE) wordt uitgevoerd door RVO. Voor een warmtepomp hangt het bedrag af van het <strong>type</strong> (lucht-water, grond-water, water-water, hybride) en het <strong>thermisch vermogen</strong>.</p>
+<h2>Bedragen op ${listName}</h2>
+<table class="sum"><thead><tr><th scope="col">Type</th><th scope="col">Bedrag per model</th></tr></thead><tbody>${typeRows}</tbody></table>
+<p class="note">Indicatieve bedragen, zoals ze op de lijst staan. <a href="${BASE}/">Zoek je model op</a> voor het bedrag dat bij jouw warmtepomp hoort.</p>
+<h2>Twee bedragen per model</h2>
+<p>Op de lijst staan per model twee bedragen. Het eerste is het gewone subsidiebedrag. Het tweede geldt voor een 2e lucht-waterwarmtepomp: als je er twee laat plaatsen, of als je al eerder subsidie kreeg voor een lucht-waterwarmtepomp. Zo staat het in de toelichting bij de lijst.</p>
+<h2>Wat betekenen de gegevens?</h2>
+<dl class="terms"><dt>Meldcode</dt><dd>Het unieke kenmerk van het model. Je vult de meldcode in bij je ISDE-aanvraag.</dd>
+<dt>Vermogen</dt><dd>Het vermogen waarmee de warmtepomp warmte afgeeft, in kilowatt (kW). Een fabrikant noemt soms een hoger vermogen, omdat die anders rekent.</dd>
+<dt>Koudemiddel en GWP</dt><dd>Het koudemiddel is de stof in de warmtepomp die de warmte transporteert. De GWP (Global Warming Potential) laat zien hoe schadelijk die stof is voor het milieu. Hoe lager de GWP, hoe beter.</dd></dl>
+<h2>Belangrijkste voorwaarden (samengevat)</h2><ul class="dots">
 <li>Lucht-water-, grond-water- of water-waterwarmtepomp; lucht-luchtwarmtepompen komen niet in aanmerking.</li>
 <li>Minimaal energielabel A++ (sinds 1 januari 2024) en geregistreerd in EPREL (tot en met 70 kW).</li>
 <li>Geïnstalleerd door een installatiebedrijf.</li>
 <li>Staat het apparaat niet op de lijst, dan kun je soms toch aanvragen met productbeschrijving en technische documentatie, maar RVO kan dan afwijzen.</li></ul>
-<h2>Zo vraag je aan</h2><ol><li>Zoek je warmtepomp op en noteer de meldcode.</li><li>Laat de warmtepomp installeren en bewaar factuur en betaalbewijs.</li><li>Vraag de subsidie aan via <a href="https://www.rvo.nl/subsidies-financiering/isde" rel="noopener">rvo.nl/isde</a> (let op de actuele aanvraagtermijn).</li></ol>
-<p class="muted">Dit is een vereenvoudigde samenvatting. De regels kunnen wijzigen; de voorwaarden op rvo.nl en in de Staatscourant zijn leidend.</p>${cta}`));
+<h2>Zo vraag je aan</h2><ol class="steps"><li>Zoek je warmtepomp op en noteer de meldcode.</li><li>Laat de warmtepomp installeren en bewaar factuur en betaalbewijs.</li><li>Vraag de subsidie aan via <a href="https://www.rvo.nl/subsidies-financiering/isde" rel="noopener">rvo.nl/isde</a> (let op de actuele aanvraagtermijn).</li></ol>
+<p class="note">Dit is een vereenvoudigde samenvatting. De regels kunnen wijzigen; de voorwaarden op rvo.nl en in de Staatscourant zijn leidend.</p>
+</div>`));
 
-write('disclosure/index.html', page('Over ISDE-checker en disclosure', 'Wie maakt deze site, waar komt de data vandaan en hoe verdienen we geld.', 'disclosure/',
-`<h1>Over deze site &amp; disclosure</h1>
-<p>ISDE-checker is een onafhankelijke hulpsite. We zijn <strong>niet</strong> verbonden aan RVO, de Rijksoverheid of een fabrikant.</p>
-<h2>Data</h2><p>Alle productgegevens komen uit de openbare <a href="${RVO_LIST}" rel="noopener">ISDE Meldcodelijst Warmtepompen</a> van RVO, die RVO als open overheidsinformatie publiceert (hergebruik toegestaan, zie <a href="https://www.rvo.nl/onderwerpen/open-data" rel="noopener">RVO open data</a>). De lijst wordt wekelijks automatisch opnieuw opgehaald. Huidige versie: ${esc(monthName || src.url)} (opgehaald ${esc(src.fetched)}). Aan deze site kunnen geen rechten worden ontleend.</p>
-<h2>Verdienmodel</h2><p>Op dit moment bevat de site geen affiliate-links of advertenties. In de toekomst kunnen we een vergoeding ontvangen als je via deze site offertes aanvraagt bij een partner. Dat melden we dan duidelijk bij de betreffende link; het heeft geen invloed op de getoonde gegevens.</p>
-<h2>Privacy</h2><p>Deze site plaatst geen tracking-cookies en verzamelt geen persoonsgegevens.</p>`));
+write('disclosure/index.html', page('Over ISDE-checker: bron, privacy en disclosure', 'Over ISDE-checker: waar de gegevens vandaan komen, hoe de site geld verdient en welke gegevens we over bezoekers verzamelen.', 'disclosure/',
+`<div class="wrap prose">
+<h1>Over deze site en disclosure</h1>
+<p class="lead">ISDE-checker is een onafhankelijke hulpsite. We zijn <strong>niet</strong> verbonden aan RVO, de Rijksoverheid of een fabrikant.</p>
+<h2>Data</h2><p>Alle productgegevens komen uit de openbare <a href="${RVO_LIST}" rel="noopener">ISDE Meldcodelijst Warmtepompen</a> van RVO, die RVO als open overheidsinformatie publiceert (hergebruik toegestaan, zie <a href="https://www.rvo.nl/onderwerpen/open-data" rel="noopener">RVO open data</a>). De lijst wordt wekelijks automatisch opnieuw opgehaald. Huidige versie: ${esc(monthName || src.url)} (opgehaald ${when}). Aan deze site kunnen geen rechten worden ontleend.</p>
+<h2>Verdienmodel</h2><p>Deze site bevat geen advertenties en geen affiliate-links. Verandert dat, dan staat het op deze pagina en melden we het duidelijk bij de betreffende link. Een vergoeding heeft nooit invloed op de getoonde gegevens: die komen uit de lijst van RVO.</p>
+<h2>Privacy</h2><p>We tellen bezoeken met GoatCounter. GoatCounter werkt zonder cookies en slaat geen persoonsgegevens op: we zien alleen totalen, zoals het aantal bezoeken per pagina. Deze site plaatst geen cookies.</p>
+<p>De site staat op GitHub Pages. GitHub registreert technische gegevens, zoals IP-adressen, om de dienst te beveiligen.</p>
+</div>`));
 
 const urls = ['', 'merken/', 'subsidie-uitleg/', 'disclosure/', ...brands.map(b => `merk/${slug(b)}/`), ...products.map(p => `warmtepomp/${p.slug}/`)];
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE}/${u}</loc><lastmod>${src.fetched}</lastmod></url>`).join('')}</urlset>`);
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
-write('404.html', page('Pagina niet gevonden – ISDE-checker', 'Pagina niet gevonden', '404.html', `<h1>Niet gevonden</h1><p><a href="${BASE}/">Terug naar zoeken</a></p>`));
+write('404.html', page('Pagina niet gevonden – ISDE-checker', 'Deze pagina bestaat niet (meer). Zoek je warmtepomp op merk, model of meldcode.', '404.html',
+`<div class="wrap prose">
+<h1>Deze pagina bestaat niet</h1>
+<p class="lead">Misschien is het adres verkeerd getypt. Of de warmtepomp staat niet meer op de meldcodelijst: dan verdwijnt ook de pagina.</p>
+${miniSearch('q404', 'Zoek op merk, model of meldcode')}
+<p class="more"><a href="${BASE}/merken/">Bekijk alle merken</a></p>
+</div>`, { robots: 'noindex' }));
 console.log(`wrote ${urls.length} pages`);
