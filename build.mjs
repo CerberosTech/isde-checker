@@ -63,6 +63,103 @@ const slug = s => String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').to
 const euro = s => { const n = parseInt(String(s ?? '').replace(/[^\d]/g, ''), 10); return isNaN(n) ? null : n; };
 const fmt = n => n == null ? '–' : '€\u00a0' + n.toLocaleString('nl-NL');
 
+// ---------- minimal markdown (guides) ----------
+// Headings, paragraphs, **bold**, *italic*, [links](url), `code`, - / 1. lists, > quotes, ``` code blocks, ---.
+// All text is escaped; raw HTML in the markdown is shown as text. "#" and "##" both become <h2> (the page title is the <h1>).
+const SAFE_URL = /^(https?:|mailto:|tel:|[^:]*$)/i; // other schemes (javascript: and so on) are shown as text
+const GUIDE_LINK = /^(?:\.{1,2}\/)*([\w-]+)\/?$/; // "slug", "slug/", "../slug/": no scheme, no leading /, no #, no extension
+const href = u => GUIDE_LINK.test(u) ? `${BASE}/gidsen/${slug(u.match(GUIDE_LINK)[1])}/` // bare relative links point to another guide
+  : /^\/(?!\/)/.test(u) && u !== BASE && !u.startsWith(BASE + '/') ? BASE + u : u; // root-relative links live under BASE
+function inline(s, store) {
+  const keep = html => `\u0000${store.push(html) - 1}\u0000`;
+  s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, t, c) => keep(`<code>${esc(c.replace(/^ (.*) $/, '$1'))}</code>`))
+    .replace(/\\([\\`*_{}\[\]()#+\-.!>~|])/g, (_, c) => keep(esc(c)))
+    .replace(/\[([^\]]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"([^"]*)")?\s*\)/g, (m, text, url, title) => !SAFE_URL.test(url) ? keep(esc(m))
+      : keep(`<a href="${esc(href(url))}"${title ? ` title="${esc(title)}"` : ''}${/^https?:/i.test(url) ? ' rel="noopener"' : ''}>${inline(text, store)}</a>`))
+    .replace(/<(https?:\/\/[^\s<>]+)>/g, (_, url) => keep(`<a href="${esc(url)}" rel="noopener">${esc(url)}</a>`))
+    .replace(/(^|[\s(])(https?:\/\/[^\s<>]*[^\s<>.,;:!?)'"\]*_])/g, (_, pre, url) => pre + keep(`<a href="${esc(url)}" rel="noopener">${esc(url)}</a>`)); // bare URLs (source lists)
+  return esc(s)
+    .replace(/\*\*\*(?=\S)([\s\S]*?\S)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(?=\S)([\s\S]*?\S)\*\*|(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g, (_, a, pre, b) => a != null ? `<strong>${a}</strong>` : `${pre}<strong>${b}</strong>`)
+    .replace(/\*(?=\S)([\s\S]*?\S)\*|(^|[^\w])_(?=\S)([\s\S]*?\S)_(?!\w)/g, (_, a, pre, b) => a != null ? `<em>${a}</em>` : `${pre}<em>${b}</em>`)
+    .replace(/(?: {2,}|\\)\n/g, '<br>\n');
+}
+function markdown(src) {
+  const store = [], ids = new Set(['main', 'q2']); // ids the page itself uses
+  const il = s => inline(s, store);
+  const LIST = /^( {0,3})([-*+]|\d{1,9}[.)])( +|$)/, FENCE = /^ {0,3}(`{3,}|~{3,})\s*([\w+-]*)/, HR = /^ {0,3}([-*_])( *\1){2,} *$/;
+  const HEAD = /^ {0,3}(#{1,6})(?: +(.*?))?(?: +#+)? *$/, QUOTE = /^ {0,3}> ?/;
+  const starts = l => HEAD.test(l) || HR.test(l) || FENCE.test(l) || QUOTE.test(l) || LIST.test(l);
+  const blocks = (lines, tight = false) => { const out = []; let i = 0;
+    while (i < lines.length) { const l = lines[i]; let m;
+      if (!l.trim()) { i++; continue; }
+      if ((m = l.match(FENCE))) { const end = new RegExp(`^ {0,3}${m[1][0]}{${m[1].length},} *$`), code = []; i++;
+        while (i < lines.length && !end.test(lines[i])) code.push(lines[i++]); i++;
+        out.push(`<pre><code${m[2] ? ` class="language-${esc(m[2])}"` : ''}>${esc(code.join('\n'))}</code></pre>`); continue; }
+      if (/^ {4}/.test(l)) { const code = [];
+        while (i < lines.length && (/^ {4}/.test(lines[i]) || !lines[i].trim())) code.push(lines[i++].slice(4));
+        while (code.length && !code.at(-1).trim()) code.pop();
+        out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`); continue; }
+      if ((m = l.match(HEAD))) { const n = Math.max(2, m[1].length), text = m[2] || '';
+        const base = slug(text.replace(/\]\([^)]*\)|[*_`\[\]]/g, '')); let id = base, k = 1; while (ids.has(id)) id = `${base}-${++k}`; ids.add(id);
+        out.push(`<h${n} id="${id}">${il(text)}</h${n}>`); i++; continue; }
+      if (HR.test(l)) { out.push('<hr>'); i++; continue; }
+      if (QUOTE.test(l)) { const q = [];
+        while (i < lines.length && lines[i].trim() && (QUOTE.test(lines[i]) || !starts(lines[i]))) q.push(lines[i++].replace(QUOTE, ''));
+        out.push(`<blockquote>${blocks(q)}</blockquote>`); continue; }
+      if ((m = l.match(LIST))) { const ordered = /\d/.test(m[2]), items = []; let loose = false;
+        while (i < lines.length) { const lm = lines[i].match(LIST);
+          if (!lm || /\d/.test(lm[2]) !== ordered || lm[1].length > m[1].length + 1) break;
+          const w = lm[0].length, item = [lines[i].slice(lm[0].length)]; i++;
+          while (i < lines.length) { const x = lines[i];
+            if (!x.trim()) { const next = lines.slice(i).find(y => y.trim()); if (next == null || !/^\s/.test(next) || next.search(/\S/) < Math.min(w, 2)) break; item.push(''); i++; continue; }
+            if (x.search(/\S/) >= Math.min(w, 2)) { item.push(x.slice(Math.min(w, x.search(/\S/)))); i++; continue; }
+            if (starts(x)) break;
+            item.push(x); i++; }
+          if (item.slice(0, -1).includes('')) loose = true;
+          items.push(item);
+          let j = i; while (j < lines.length && !lines[j].trim()) j++;
+          if (j > i && j < lines.length && LIST.test(lines[j]) && lines[j].match(LIST)[1].length <= m[1].length + 1 && /\d/.test(lines[j].match(LIST)[2]) === ordered) { loose = true; i = j; }
+        }
+        const n = ordered ? parseInt(m[2], 10) : 1, tag = ordered ? 'ol' : 'ul';
+        out.push(`<${tag}${ordered && n !== 1 ? ` start="${n}"` : ''}>${items.map(it => `<li>${blocks(it, !loose)}</li>`).join('')}</${tag}>`); continue; }
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !(para.length && starts(lines[i]))) para.push(lines[i++].replace(/^ +/, ''));
+      const html = il(para.join('\n').replace(/ +$/, ''));
+      out.push(tight ? html : `<p>${html}</p>`);
+    }
+    return out.join('\n'); };
+  let html = blocks(String(src).replace(/\u0000/g, '').replace(/\r\n?/g, '\n').replace(/\t/g, '    ').split('\n'));
+  while (html.includes('\u0000')) html = html.replace(/\u0000(\d+)\u0000/g, (_, n) => store[n]);
+  return html;
+}
+
+// Guides: content/gidsen/*.md with front matter (title, description, slug, optional updated: YYYY-MM-DD).
+// A value is split from its key on the first colon only; "..." and '...' quotes are stripped.
+const unquote = v => { let m = v.match(/^"((?:[^"\\]|\\.)*)"$/); if (m) return m[1].replace(/\\(["\\])/g, '$1');
+  m = v.match(/^'((?:[^']|'')*)'$/); return m ? m[1].replace(/''/g, "'") : v; };
+const plainText = s => squash(s.replace(/[*_`]/g, '')).replace(/ +/g, ' ').toLowerCase();
+const GUIDES_DIR = 'content/gidsen';
+function readGuides() {
+  const list = [], slugs = new Set();
+  const files = fs.existsSync(GUIDES_DIR) ? fs.readdirSync(GUIDES_DIR).filter(f => f.endsWith('.md')).sort() : [];
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(GUIDES_DIR, file), 'utf8').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+    const fm = text.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/), meta = {};
+    for (const line of (fm ? fm[1] : '').split('\n')) { const m = line.match(/^([A-Za-z_][\w-]*)\s*:\s*(.*?)\s*$/); if (m) meta[m[1].toLowerCase()] = unquote(m[2]); }
+    const g = { file, title: squash(meta.title || ''), description: squash(meta.description || ''), slug: slug(meta.slug || file.replace(/\.md$/, '')), body: fm ? text.slice(fm[0].length) : text };
+    const h1 = g.body.match(/^\s*(?:# +(.*?)(?: +#+)? *|(\S.*?) *\n=+ *)(?:\n|$)/); // the page H1 is the title: drop a body H1 that repeats it
+    if (h1 && plainText(h1[1] ?? h1[2]) === plainText(g.title)) g.body = g.body.slice(h1[0].length);
+    if (!g.title || !g.description) { console.warn(`gidsen: ${file} skipped (title and description are required)`); continue; }
+    if (slugs.has(g.slug)) { console.warn(`gidsen: ${file} skipped (slug "${g.slug}" is already used)`); continue; }
+    if (meta.updated) { const d = new Date(`${meta.updated}T00:00:00Z`);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(meta.updated) && !isNaN(d) && d.toISOString().slice(0, 10) === meta.updated) g.updated = meta.updated;
+      else console.warn(`gidsen: ${file}: updated "${meta.updated}" ignored (use YYYY-MM-DD)`); }
+    slugs.add(g.slug); list.push(g);
+  }
+  return list.sort((a, b) => (b.updated || '').localeCompare(a.updated || '') || a.title.localeCompare(b.title, 'nl'));
+}
+
 const { buf, src } = await getList();
 const sheets = readXlsx(buf);
 const rows = sheets['Meldcodes'] || Object.values(sheets).find(r => String(r[0]?.[0]).toUpperCase() === 'MELDCODE');
@@ -105,15 +202,15 @@ const brandTitle = b => fit(60, `ISDE-subsidie ${b} warmtepomp: meldcodes en bed
 const brandDesc = (b, n, range) => { const what = n === 1 ? `De warmtepomp van ${b} op ${listName}, met meldcode en subsidiebedrag` : `Alle ${nl(n)} warmtepompen van ${b} op ${listName}, met meldcode en subsidiebedrag per model`;
   return fit(155, `${what}${range ? ` (${range})` : ''}.`, `${what}.`, fill(155, `Alle warmtepompen van {} op ${listName}, met meldcode en subsidiebedrag.`, b)); };
 
-const NAV = [['', 'Zoeken'], ['merken/', 'Merken'], ['subsidie-uitleg/', 'Uitleg'], ['disclosure/', 'Over']];
-const page = (title, desc, rel, body, { cls = '', robots = '' } = {}) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+const NAV = [['', 'Zoeken'], ['merken/', 'Merken'], ['gidsen/', 'Gidsen'], ['subsidie-uitleg/', 'Uitleg'], ['disclosure/', 'Over']];
+const page = (title, desc, rel, body, { cls = '', robots = '', type = 'website', head = '' } = {}) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}/${rel}">${robots ? `<meta name="robots" content="${robots}">` : ''}
 <meta name="theme-color" content="${THEME}"><meta name="color-scheme" content="light">
 <link rel="icon" href="${BASE}/favicon.ico" sizes="32x32"><link rel="icon" href="${BASE}/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="${BASE}/apple-touch-icon.png">
-<meta property="og:type" content="website"><meta property="og:site_name" content="ISDE-checker"><meta property="og:locale" content="nl_NL">
+<meta property="og:type" content="${type}"><meta property="og:site_name" content="ISDE-checker"><meta property="og:locale" content="nl_NL">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}/${rel}">
 <meta property="og:image" content="${OG_IMAGE}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${esc(OG_ALT)}">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="summary_large_image">${head}
 <link rel="stylesheet" href="${BASE}/style.css"></head><body${cls ? ` class="${cls}"` : ''}>
 <a class="skip" href="#main">Naar de inhoud</a>
 <header class="site-head"><div class="wrap"><a class="brand" href="${BASE}/"><img src="${BASE}/logo.svg" alt="" width="36" height="36">ISDE-checker</a>
@@ -256,8 +353,37 @@ write('disclosure/index.html', page('Over ISDE-checker: bron, privacy en disclos
 <p>De site staat op GitHub Pages. GitHub registreert technische gegevens, zoals IP-adressen, om de dienst te beveiligen.</p>
 </div>`));
 
+const guides = readGuides();
+const longDate = iso => new Date(`${iso}T00:00:00Z`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const updatedLine = g => g.updated ? `<p class="note">Bijgewerkt op <time datetime="${g.updated}">${esc(longDate(g.updated))}</time></p>` : '';
+const jsonLd = data => `\n<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+const PUBLISHER = { '@type': 'Organization', name: 'ISDE-checker', url: `${SITE}/`, logo: { '@type': 'ImageObject', url: `${SITE}/logo-512.png`, width: 512, height: 512 } };
+write('gidsen/index.html', page('Gidsen over ISDE-subsidie voor je warmtepomp', 'Gidsen van ISDE-checker over de ISDE-subsidie voor warmtepompen, met per gids een korte samenvatting en de datum van de laatste update.', 'gidsen/',
+`<div class="wrap prose">
+<h1>Gidsen</h1>
+<p class="lead">Uitleg in gewone taal over de ISDE-subsidie voor je warmtepomp.</p>
+${guides.length ? `<ul class="guides">${guides.map(g => `<li><h2><a href="${BASE}/gidsen/${g.slug}/">${esc(g.title)}</a></h2><p>${esc(g.description)}</p>${updatedLine(g)}</li>`).join('')}</ul>`
+  : `<div class="nohit"><p>Er staan op dit moment geen gidsen op deze site.</p><p>Wil je weten of je warmtepomp subsidie krijgt?</p><ul><li><a href="${BASE}/">Zoek je warmtepomp op</a></li><li><a href="${BASE}/subsidie-uitleg/">Lees hoe de subsidie werkt</a></li></ul></div>`}
+</div>`));
+for (const g of guides) { const url = `${SITE}/gidsen/${g.slug}/`, body = markdown(g.body);
+  for (const [, to] of body.matchAll(new RegExp(`href="${BASE}/gidsen/([^/"#]+)/`, 'g'))) if (!guides.some(x => x.slug === to)) console.warn(`gidsen: ${g.file}: link to unknown guide "${to}"`);
+  write(`gidsen/${g.slug}/index.html`, page(fit(60, `${g.title} – ISDE-checker`, g.title), fit(155, g.description), `gidsen/${g.slug}/`,
+`<div class="wrap"><nav class="crumbs" aria-label="Kruimelpad"><ol><li><a href="${BASE}/gidsen/">Gidsen</a></li></ol></nav></div>
+<article class="wrap prose md">
+<h1>${esc(g.title)}</h1>
+<p class="lead">${esc(g.description)}</p>
+${updatedLine(g)}
+${body}
+<p class="note">Deze gids is geschreven met hulp van AI en gecontroleerd op bronnen.</p>
+<p class="more"><a href="${BASE}/gidsen/">Alle gidsen</a></p>
+${miniSearch('q2', 'Zoek je warmtepomp op')}
+</article>`, { type: 'article', head: (g.updated ? `\n<meta property="article:modified_time" content="${g.updated}">` : '') + jsonLd({ '@context': 'https://schema.org', '@type': 'Article',
+    headline: clip(g.title, 110), description: g.description, ...(g.updated && { dateModified: g.updated }), url, mainEntityOfPage: url, inLanguage: 'nl-NL', image: OG_IMAGE, author: PUBLISHER, publisher: PUBLISHER }) })); }
+
 const urls = ['', 'merken/', 'subsidie-uitleg/', 'disclosure/', ...brands.map(b => `merk/${slug(b)}/`), ...products.map(p => `warmtepomp/${p.slug}/`)];
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE}/${u}</loc><lastmod>${src.fetched}</lastmod></url>`).join('')}</urlset>`);
+const lastGuide = guides.map(g => g.updated).filter(Boolean).sort().at(-1);
+const guideUrls = [['gidsen/', lastGuide], ...guides.map(g => [`gidsen/${g.slug}/`, g.updated])];
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE}/${u}</loc><lastmod>${src.fetched}</lastmod></url>`).join('')}${guideUrls.map(([u, d]) => `<url><loc>${SITE}/${u}</loc>${d ? `<lastmod>${d}</lastmod>` : ''}</url>`).join('')}</urlset>`);
 write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 write('404.html', page('Pagina niet gevonden – ISDE-checker', 'Deze pagina bestaat niet (meer). Zoek je warmtepomp op merk, model of meldcode.', '404.html',
 `<div class="wrap prose">
@@ -266,4 +392,4 @@ write('404.html', page('Pagina niet gevonden – ISDE-checker', 'Deze pagina bes
 ${miniSearch('q404', 'Zoek op merk, model of meldcode')}
 <p class="more"><a href="${BASE}/merken/">Bekijk alle merken</a></p>
 </div>`, { robots: 'noindex' }));
-console.log(`wrote ${urls.length} pages`);
+console.log(`wrote ${urls.length + guideUrls.length} pages (${guides.length} gidsen)`);
