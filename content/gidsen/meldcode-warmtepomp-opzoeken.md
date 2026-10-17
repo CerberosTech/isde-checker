@@ -14,6 +14,8 @@ Voor een ISDE-aanvraag heb je de **meldcode** van je warmtepomp nodig. Die code 
 1. **Ga naar de Meldcodelijst Warmtepompen op rvo.nl** [1].
 2. **Zoek op merk, type of productnaam.** Gebruik het exacte typenummer van de offerte of het typeplaatje; binnen één merk lijken namen vaak op elkaar.
 3. **Noteer de meldcode** en bekijk het indicatieve subsidiebedrag dat bij het model staat [1][3].
+Wil je eerst per merk bladeren? Bekijk [alle merken op de ISDE-lijst](https://cerberostech.github.io/isde-checker/merken/) op deze site.
+
 4. **Liever een spreadsheet?** RVO biedt de lijst ook als Excel-download aan, die maandelijks wordt bijgewerkt (op 17 oktober 2026 is dat de versie van oktober 2026). Aan de download kun je volgens RVO geen rechten ontlenen [2].
 
 Tip van RVO: controleer **vóór de aankoop** of de warmtepomp op de lijst staat, en vraag je installateur om de meldcode in de offerte én op de factuur te zetten [3][4].
