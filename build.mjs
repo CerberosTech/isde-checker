@@ -217,7 +217,7 @@ const page = (title, desc, rel, body, { cls = '', robots = '', type = 'website',
 <nav class="site-nav" aria-label="Hoofdmenu"><ul>${NAV.map(([href, label]) => `<li><a href="${BASE}/${href}"${href === rel ? ' aria-current="page"' : ''}>${label}</a></li>`).join('')}</ul></nav></div></header>
 <main id="main" tabindex="-1">${body}</main>
 <footer class="site-foot"><div class="wrap"><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid.</p>
-<ul class="foot-nav"><li><a href="${BASE}/merken/">Alle merken</a></li><li><a href="${BASE}/warmtepomp/">Alle modellen</a></li><li><a href="${BASE}/subsidie-uitleg/">Uitleg subsidie</a></li><li><a href="${BASE}/disclosure/">Over deze site en disclosure</a></li></ul></div></footer>${ANALYTICS}</body></html>`;
+<ul class="foot-nav"><li><a href="${BASE}/merken/">Alle merken</a></li><li><a href="${BASE}/warmtepomp/">Alle modellen</a></li><li><a href="${BASE}/subsidie-uitleg/">Uitleg subsidie</a></li><li><a href="${BASE}/disclosure/">Over deze site en disclosure</a></li><li><a href="https://cerberostech.github.io/belastingcalculator/">Belastingcalculator 2026</a></li></ul></div></footer>${ANALYTICS}</body></html>`;
 
 // A list of models: the model name (with type and kW) links to the product page; meldcode as a plate; amount.
 // Brand pages group the tables by type, so there the line under the model only gives the kW.
