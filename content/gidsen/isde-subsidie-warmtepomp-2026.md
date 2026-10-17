@@ -13,7 +13,7 @@ Met de Investeringssubsidie duurzame energie en energiebesparing (ISDE) krijg je
 
 - Je krijgt **altijd minimaal € 500** voor een (hybride) warmtepomp [1].
 - Het precieze bedrag verschilt per model. RVO noemt geen vast bedrag per type: je vindt een indicatie per warmtepomp op de **meldcodelijst warmtepompen** [1][3]. Zie ook onze gids [Meldcode warmtepomp opzoeken](meldcode-warmtepomp-opzoeken).
-- Zoek je een merk? Bekijk [alle merken op de ISDE-lijst](https://cerberostech.github.io/isde-checker/merken/).
+- Zoek je model of meldcode op in [onze lijst met warmtepompen](https://cerberostech.github.io/isde-checker/warmtepomp/), of blader via [alle merken op de ISDE-lijst](https://cerberostech.github.io/isde-checker/merken/).
 - Voer je meerdere maatregelen uit, gebruik dan de ISDE-rekentool van RVO voor een schatting van het totaalbedrag [1][2].
 
 ### Uitzonderingen in 2026
