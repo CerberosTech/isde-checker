@@ -15,7 +15,7 @@ Je moet eigenaar-bewoner zijn, de warmtepomp moet nieuw zijn en door een bouwins
 
 ## Stap 2: Zoek de meldcode
 
-Controleer vóór de aankoop of de warmtepomp op de meldcodelijst van RVO staat [1]. Zie [Meldcode warmtepomp opzoeken](meldcode-warmtepomp-opzoeken).
+Controleer vóór de aankoop of de warmtepomp op de meldcodelijst van RVO staat [1]. Zie [Meldcode warmtepomp opzoeken](meldcode-warmtepomp-opzoeken). Je kunt je meldcode ook direct zoeken in [onze lijst met warmtepompen](https://cerberostech.github.io/isde-checker/warmtepomp/).
 
 ## Stap 3: Koop de warmtepomp
 
