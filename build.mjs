@@ -202,7 +202,7 @@ const brandTitle = b => fit(60, `ISDE-subsidie ${b} warmtepomp: meldcodes en bed
 const brandDesc = (b, n, range) => { const what = n === 1 ? `De warmtepomp van ${b} op ${listName}, met meldcode en subsidiebedrag` : `Alle ${nl(n)} warmtepompen van ${b} op ${listName}, met meldcode en subsidiebedrag per model`;
   return fit(155, `${what}${range ? ` (${range})` : ''}.`, `${what}.`, fill(155, `Alle warmtepompen van {} op ${listName}, met meldcode en subsidiebedrag.`, b)); };
 
-const NAV = [['', 'Zoeken'], ['merken/', 'Merken'], ['gidsen/', 'Gidsen'], ['subsidie-uitleg/', 'Uitleg'], ['disclosure/', 'Over']];
+const NAV = [['', 'Zoeken'], ['merken/', 'Merken'], ['warmtepomp/', 'Modellen'], ['gidsen/', 'Gidsen'], ['subsidie-uitleg/', 'Uitleg'], ['disclosure/', 'Over']];
 const page = (title, desc, rel, body, { cls = '', robots = '', type = 'website', head = '' } = {}) => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}/${rel}">${robots ? `<meta name="robots" content="${robots}">` : ''}
 <meta name="theme-color" content="${THEME}"><meta name="color-scheme" content="light">
@@ -217,7 +217,7 @@ const page = (title, desc, rel, body, { cls = '', robots = '', type = 'website',
 <nav class="site-nav" aria-label="Hoofdmenu"><ul>${NAV.map(([href, label]) => `<li><a href="${BASE}/${href}"${href === rel ? ' aria-current="page"' : ''}>${label}</a></li>`).join('')}</ul></nav></div></header>
 <main id="main" tabindex="-1">${body}</main>
 <footer class="site-foot"><div class="wrap"><p>${srcLine}</p><p>Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid.</p>
-<ul class="foot-nav"><li><a href="${BASE}/merken/">Alle merken</a></li><li><a href="${BASE}/subsidie-uitleg/">Uitleg subsidie</a></li><li><a href="${BASE}/disclosure/">Over deze site en disclosure</a></li></ul></div></footer>${ANALYTICS}</body></html>`;
+<ul class="foot-nav"><li><a href="${BASE}/merken/">Alle merken</a></li><li><a href="${BASE}/warmtepomp/">Alle modellen</a></li><li><a href="${BASE}/subsidie-uitleg/">Uitleg subsidie</a></li><li><a href="${BASE}/disclosure/">Over deze site en disclosure</a></li></ul></div></footer>${ANALYTICS}</body></html>`;
 
 // A list of models: the model name (with type and kW) links to the product page; meldcode as a plate; amount.
 // Brand pages group the tables by type, so there the line under the model only gives the kW.
@@ -296,6 +296,21 @@ ${groups.length > 1 ? `<nav class="jump" aria-label="Soorten warmtepomp"><ul>${g
 ${groups.map(([c, l]) => `<section class="group"><h2 id="${slug(c)}">${esc(c)} <span class="count">${count(l.length, 'model', 'modellen')}</span></h2>${table(l, { label: slug(c) })}</section>`).join('\n')}
 ${miniSearch('q2', 'Zoek een ander model')}
 </div>`)); }
+
+// All models on one page, per brand. Without JS it is a plain list; the filter only hides rows and empty brands.
+const brandId = b => `merk-${slug(b)}`;
+const FILTER = `<script>(()=>{const f=document.getElementById('filter'),q=document.getElementById('fq'),c=document.getElementById('fcount');if(!f||!q||!c)return;const norm=s=>String(s).toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim(),nl=n=>n.toLocaleString('nl-NL');const G=[...document.querySelectorAll('section[data-brand]')].map(s=>({s,j:document.querySelector('.jump-brands a[href="#'+s.querySelector('h2').id+'"]'),r:[...s.querySelectorAll('tbody tr')].map(r=>{const m=r.querySelector('.n').textContent;return{r,h:norm(s.dataset.brand+' '+m+' '+r.querySelector('.plate').textContent)+' '+norm(m).replace(/ /g,'')}})}));const run=()=>{const t=norm(q.value).split(' ').filter(Boolean);let n=0;for(const g of G){let k=0;for(const x of g.r){const ok=t.every(w=>x.h.includes(w));x.r.hidden=!ok;if(ok)k++}g.s.hidden=!k;if(g.j)g.j.parentNode.hidden=!k;n+=k}c.textContent=!t.length?'':n?nl(n)+(n===1?' model gevonden':' modellen gevonden'):'Geen model gevonden. Zoek op een deel van de typecode.'};f.hidden=false;f.addEventListener('submit',e=>e.preventDefault());q.addEventListener('input',run);if(q.value)run()})()</script>`;
+write('warmtepomp/index.html', page('Alle warmtepompen op de ISDE-meldcodelijst', fit(155, `Alle ${nl(products.length)} warmtepompen op ${listName}, per merk. Kies een model en zie de meldcode en het subsidiebedrag.`, `Alle warmtepompen op ${listName}, per merk.`), 'warmtepomp/',
+`<div class="wrap">
+<h1>Alle warmtepompen op de ISDE-lijst</h1>
+<p class="lead">${nl(products.length)} warmtepompen van ${brands.length} merken op ${listName}. Kies een model voor de meldcode en het subsidiebedrag.</p>
+<form id="filter" class="search search-filter" action="${BASE}/" method="get" role="search" hidden><label for="fq">Filter op merk, model of meldcode</label>
+<div class="field"><input id="fq" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Merk, model of meldcode"></div></form>
+<p id="fcount" class="count" role="status"></p>
+<nav class="jump-brands" aria-label="Merken"><details><summary>Spring naar een merk (${brands.length})</summary><ul class="brands">${brands.map(b => { const n = perBrand.get(b).length; return `<li><a href="#${brandId(b)}">${esc(b)} <span class="num">${nl(n)}<span class="vh"> ${n === 1 ? 'model' : 'modellen'}</span></span></a></li>`; }).join('')}</ul></details></nav>
+${brands.map(b => { const l = [...perBrand.get(b)].sort((x, y) => byModel.compare(x.model, y.model));
+  return `<section class="group" data-brand="${esc(b)}"><h2 id="${brandId(b)}">${esc(b)} <span class="count">${count(l.length, 'model', 'modellen')}</span></h2>${table(l, { label: brandId(b) })}</section>`; }).join('\n')}
+</div>${FILTER}`));
 
 for (const p of products) { const bs = slug(p.brand), n = perBrand.get(p.brand).length;
   write(`warmtepomp/${p.slug}/index.html`, page(productTitle(p), productDesc(p), `warmtepomp/${p.slug}/`,
@@ -380,7 +395,7 @@ ${miniSearch('q2', 'Zoek je warmtepomp op')}
 </article>`, { type: 'article', head: (g.updated ? `\n<meta property="article:modified_time" content="${g.updated}">` : '') + jsonLd({ '@context': 'https://schema.org', '@type': 'Article',
     headline: clip(g.title, 110), description: g.description, ...(g.updated && { dateModified: g.updated }), url, mainEntityOfPage: url, inLanguage: 'nl-NL', image: OG_IMAGE, author: PUBLISHER, publisher: PUBLISHER }) })); }
 
-const urls = ['', 'merken/', 'subsidie-uitleg/', 'disclosure/', ...brands.map(b => `merk/${slug(b)}/`), ...products.map(p => `warmtepomp/${p.slug}/`)];
+const urls = ['', 'merken/', 'warmtepomp/', 'subsidie-uitleg/', 'disclosure/', ...brands.map(b => `merk/${slug(b)}/`), ...products.map(p => `warmtepomp/${p.slug}/`)];
 const lastGuide = guides.map(g => g.updated).filter(Boolean).sort().at(-1);
 const guideUrls = [['gidsen/', lastGuide], ...guides.map(g => [`gidsen/${g.slug}/`, g.updated])];
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${SITE}/${u}</loc><lastmod>${src.fetched}</lastmod></url>`).join('')}${guideUrls.map(([u, d]) => `<url><loc>${SITE}/${u}</loc>${d ? `<lastmod>${d}</lastmod>` : ''}</url>`).join('')}</urlset>`);
