@@ -25,16 +25,14 @@ RVO geeft dit voorbeeld [1]: 36 m² biobased dakisolatie in 2025 levert 36 × �
 
 Volgens RVO, vóór verdubbeling [1]:
 
-| Maatregel | Bedrag per m² | Minimaal / maximaal |
-|---|---|---|
-| Spouwmuurisolatie | € 5,25 | 10 / 170 m² |
-| Gevelisolatie | € 20,25 | 10 / 170 m² |
-| Dakisolatie | € 16,25 | 20 / 200 m² |
-| Vloerisolatie | € 5,50 | 20 / 130 m² |
-| Bodemisolatie | € 3 | 20 / 130 m² |
-| Zolder- of vlieringvloerisolatie | € 4 | 20 / 130 m² |
-| HR++ glas (zonder nieuwe kozijnen) | € 25 | 3 / 45 m² (alle glas samen) |
-| Triple of vacuümglas in nieuwe kozijnen | € 111 | 3 / 45 m² (alle glas samen) |
+- **Spouwmuurisolatie:** € 5,25 per m² (minimaal / maximaal 10 / 170 m²)
+- **Gevelisolatie:** € 20,25 per m² (minimaal / maximaal 10 / 170 m²)
+- **Dakisolatie:** € 16,25 per m² (minimaal / maximaal 20 / 200 m²)
+- **Vloerisolatie:** € 5,50 per m² (minimaal / maximaal 20 / 130 m²)
+- **Bodemisolatie:** € 3 per m² (minimaal / maximaal 20 / 130 m²)
+- **Zolder- of vlieringvloerisolatie:** € 4 per m² (minimaal / maximaal 20 / 130 m²)
+- **HR++ glas (zonder nieuwe kozijnen):** € 25 per m² (minimaal / maximaal 3 / 45 m² (alle glas samen))
+- **Triple of vacuümglas in nieuwe kozijnen:** € 111 per m² (minimaal / maximaal 3 / 45 m² (alle glas samen))
 
 Voor bodem- en vloerisolatie, en voor dak- en zoldervloerisolatie, geldt de minimale 20 m² voor beide samen [1].
 
