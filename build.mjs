@@ -225,7 +225,11 @@ const typeLine = (p, withType) => [withType ? p.cat : '', p.kw ? `${nl(p.kw)} kW
 const row = (p, withBrand) => { const x = typeLine(p, withBrand); return `<tr><td class="m"><a href="${BASE}/warmtepomp/${p.slug}/">${withBrand ? `<span class="b">${esc(p.brand)}</span>` : ''}<span class="n">${esc(p.model)}</span>${x ? `<span class="x">${esc(x)}</span>` : ''}</a></td><td class="c"><span class="plate">${esc(p.code)}</span></td><td class="s">${fmt(p.sub)}</td></tr>`; };
 const table = (list, { withBrand = false, label = '' } = {}) => `<table class="list"${label ? ` aria-labelledby="${label}"` : ''}><thead><tr><th scope="col">${withBrand ? 'Merk en model' : 'Model'}</th><th scope="col">Meldcode</th><th scope="col">Subsidie</th></tr></thead><tbody>${list.map(p => row(p, withBrand)).join('')}</tbody></table>`;
 const miniSearch = (id, label) => `<form class="search search-mini" action="${BASE}/" method="get" role="search"><label for="${id}">${label}</label><div class="field"><input id="${id}" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Merk of model"><button type="submit">Zoeken</button></div></form>`;
-const ICON_OK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="currentColor"/><path d="M6.8 12.4l3.4 3.4 7-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// bol.com partner search links (affiliate). Shown on every model page and every guide; disclosed on /disclosure/.
+const bol = (query, name) => `https://partner.bol.com/click/click?t=url&s=1550553&url=${encodeURIComponent('https://www.bol.com/nl/nl/s/?searchtext=' + encodeURIComponent(query))}&f=txl&name=${name}`;
+const BOL_LINKS = [['Slimme thermostaat', 'slimme thermostaat tado nest', 'slimme-thermostaat'], ['P1-meter', 'homewizard p1 meter', 'p1-meter'], ['Radiatorventilator', 'radiatorventilator', 'radiatorventilator'], ['Tochtstrips en isolatie', 'tochtstrips', 'tochtstrips']];
+const AFF = `<aside class="aff" aria-labelledby="aff-h"><h2 id="aff-h">Handig bij je warmtepomp</h2><p>Zoek op bol.com:</p><ul>${BOL_LINKS.map(([label, q, name]) => `<li><a href="${bol(q, name)}" rel="sponsored nofollow noopener" target="_blank">${label}</a></li>`).join('')}</ul><p class="aff-note"><a href="${BASE}/disclosure/#affiliate">Affiliatelinks: wij krijgen een kleine commissie, jij betaalt niets extra</a></p></aside>`;
+const ICON_OK ='<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="currentColor"/><path d="M6.8 12.4l3.4 3.4 7-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICON_BAND = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const COPY = `<script>(()=>{const b=document.querySelector('[data-copy]');if(!b||!navigator.clipboard)return;const s=b.nextElementSibling,t=b.textContent;let k;b.hidden=false;b.addEventListener('click',()=>navigator.clipboard.writeText(b.dataset.copy).then(()=>{b.textContent='Gekopieerd';s.textContent='Meldcode '+b.dataset.copy+' gekopieerd';clearTimeout(k);k=setTimeout(()=>{b.textContent=t;s.textContent=''},2500)},()=>{}))})()</script>`;
 
@@ -331,6 +335,7 @@ for (const p of products) { const bs = slug(p.brand), n = perBrand.get(p.brand).
 ${p.sub2 != null && p.sub2 !== p.sub ? '<p class="note">Het bedrag voor een 2e warmtepomp geldt als je twee lucht-waterwarmtepompen laat plaatsen, of als je al eerder subsidie kreeg voor een lucht-waterwarmtepomp.</p>' : ''}
 <p>Vul meldcode <strong>${esc(p.code)}</strong> in bij je ISDE-aanvraag bij RVO. Het bedrag is indicatief; RVO stelt de definitieve subsidie vast. <a href="${BASE}/subsidie-uitleg/">Zo werkt de subsidie</a></p>
 <p class="more"><a href="${BASE}/merk/${bs}/">${n === 1 ? `Alle modellen van ${esc(p.brand)}` : `Alle ${nl(n)} modellen van ${esc(p.brand)}`}</a></p>
+${AFF}
 ${miniSearch('q2', 'Zoek een ander model')}
 </div>${COPY}`)); }
 
@@ -363,8 +368,11 @@ write('disclosure/index.html', page('Over ISDE-checker: bron, privacy en disclos
 <h1>Over deze site en disclosure</h1>
 <p class="lead">ISDE-checker is een onafhankelijke hulpsite. We zijn <strong>niet</strong> verbonden aan RVO, de Rijksoverheid of een fabrikant.</p>
 <h2>Data</h2><p>Alle productgegevens komen uit de openbare <a href="${RVO_LIST}" rel="noopener">ISDE Meldcodelijst Warmtepompen</a> van RVO, die RVO als open overheidsinformatie publiceert (hergebruik toegestaan, zie <a href="https://www.rvo.nl/onderwerpen/open-data" rel="noopener">RVO open data</a>). De lijst wordt wekelijks automatisch opnieuw opgehaald. Huidige versie: ${esc(monthName || src.url)} (opgehaald ${when}). Aan deze site kunnen geen rechten worden ontleend.</p>
-<h2>Verdienmodel</h2><p>Deze site bevat geen advertenties en geen affiliate-links. Verandert dat, dan staat het op deze pagina en melden we het duidelijk bij de betreffende link. Een vergoeding heeft nooit invloed op de getoonde gegevens: die komen uit de lijst van RVO.</p>
+<h2 id="affiliate">Verdienmodel: bol.com-affiliatelinks</h2><p>ISDE-checker is partner van bol.com. Op elke modelpagina (onder <a href="${BASE}/warmtepomp/">Modellen</a>) en in elke <a href="${BASE}/gidsen/">gids</a> staat een blok ‘Handig bij je warmtepomp’. Daarin staan zoeklinks naar bol.com: slimme thermostaat, P1-meter, radiatorventilator en tochtstrips.</p>
+<p>Dit zijn affiliatelinks. Koop je iets via zo’n link, dan krijgen wij een kleine commissie van bol.com. Jij betaalt niets extra. De links gaan naar zoekresultaten op bol.com; wij hebben de producten niet getest en raden geen bepaald product aan.</p>
+<p>De commissie heeft geen invloed op de ISDE-informatie. De meldcodes, de bedragen en de volgorde van de modellen komen uit de lijst van RVO. Verder bevat deze site geen advertenties en geen andere affiliatelinks. Verandert dat, dan staat het op deze pagina.</p>
 <h2>Privacy</h2><p>We tellen bezoeken met GoatCounter. GoatCounter werkt zonder cookies en slaat geen persoonsgegevens op: we zien alleen totalen, zoals het aantal bezoeken per pagina. Deze site plaatst geen cookies.</p>
+<p>Klik je op een bol.com-link, dan ga je via partner.bol.com naar bol.com. bol.com kan dan cookies plaatsen om de commissie toe te wijzen. Daarvoor geldt het privacybeleid van bol.com.</p>
 <p>De site staat op GitHub Pages. GitHub registreert technische gegevens, zoals IP-adressen, om de dienst te beveiligen.</p>
 </div>`));
 
@@ -391,6 +399,7 @@ ${updatedLine(g)}
 ${body}
 <p class="note">Deze gids is geschreven met hulp van AI en gecontroleerd op bronnen.</p>
 <p class="more"><a href="${BASE}/gidsen/">Alle gidsen</a></p>
+${AFF}
 ${miniSearch('q2', 'Zoek je warmtepomp op')}
 </article>`, { type: 'article', head: (g.updated ? `\n<meta property="article:modified_time" content="${g.updated}">` : '') + jsonLd({ '@context': 'https://schema.org', '@type': 'Article',
     headline: clip(g.title, 110), description: g.description, ...(g.updated && { dateModified: g.updated }), url, mainEntityOfPage: url, inLanguage: 'nl-NL', image: OG_IMAGE, author: PUBLISHER, publisher: PUBLISHER }) })); }
