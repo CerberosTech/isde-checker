@@ -142,6 +142,25 @@ main{display:block;padding-top:clamp(1.25rem,3vw,2.25rem)}
 .steps li{position:relative;min-height:2.25rem;padding:.15rem 0 .9rem 3rem;counter-increment:step}
 .steps li::before{content:counter(step);position:absolute;top:0;left:0;display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:var(--ink);color:var(--paper);font-size:.9375rem;font-weight:800}
 
+/* guides */
+.guides{max-width:var(--measure);margin:1.5rem 0 1rem;padding:0;list-style:none;border-top:2px solid var(--ink)}
+.guides li{padding:1rem 0 .25rem;border-bottom:1px solid var(--line)}
+.guides h2{margin:0 0 .25rem;font-size:1.375rem}
+.guides h2 a{display:inline-flex;align-items:center;min-height:44px}
+.md>h2,.md>h3,.md>h4,.md>h5,.md>h6,.md>blockquote,.md>pre,.md>hr{max-width:var(--measure)}
+.md h3{margin-top:1.75em;font-size:1.25rem}
+.md h4,.md h5,.md h6{margin:1.5em 0 .5em;font-size:1.0625rem}
+.md>ul,.md>ol{padding-left:1.5rem}
+.md li{margin-bottom:.35rem}
+.md li>ul,.md li>ol{margin:.35rem 0 0;padding-left:1.5rem}
+.md li::marker{color:var(--green)}
+.md blockquote{margin:0 0 1rem;padding:.25rem 0 .25rem 1.25rem;border-left:4px solid var(--green);color:var(--muted)}
+.md blockquote>:last-child{margin-bottom:0}
+.md code{padding:.1em .3em;border-radius:.3em;background:var(--mist);font:.9em/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.md pre{margin:0 0 1rem;padding:1rem;overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--mist)}
+.md pre code{padding:0;background:none;white-space:pre}
+.md hr{margin:2rem 0;border:0;border-top:1px solid var(--line)}
+
 @media (max-width:39.99em){
   .site-nav{width:100%}
   .site-nav ul{justify-content:space-between}
@@ -149,6 +168,10 @@ main{display:block;padding-top:clamp(1.25rem,3vw,2.25rem)}
   .site-nav li:first-child a{padding-left:0}
   .site-nav li:last-child a{padding-right:0}
   .spec div{grid-template-columns:minmax(0,9rem) minmax(0,1fr)}
+}
+@media (max-width:22.49em){
+  .site-nav ul{flex-wrap:wrap}
+  .site-nav a{justify-content:center;min-width:44px;padding:0 .25rem;font-size:1rem}
 }
 @media (min-width:52em){
   .info{grid-template-columns:1fr 1fr}
