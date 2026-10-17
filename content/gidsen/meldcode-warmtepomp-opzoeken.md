@@ -16,7 +16,7 @@ Voor een ISDE-aanvraag heb je de **meldcode** van je warmtepomp nodig. Die code 
 3. **Noteer de meldcode** en bekijk het indicatieve subsidiebedrag dat bij het model staat [1][3].
 4. **Liever een spreadsheet?** RVO biedt de lijst ook als Excel-download aan, die maandelijks wordt bijgewerkt (op 17 oktober 2026 is dat de versie van oktober 2026). Aan de download kun je volgens RVO geen rechten ontlenen [2].
 
-Wil je eerst per merk bladeren? Bekijk [alle merken op de ISDE-lijst](https://cerberostech.github.io/isde-checker/merken/) op deze site.
+Sneller: zoek je meldcode direct in [onze lijst met warmtepompen](https://cerberostech.github.io/isde-checker/warmtepomp/), op merk, type of meldcode. Elk model heeft een eigen pagina, bijvoorbeeld de [NIBE F2040-8](https://cerberostech.github.io/isde-checker/warmtepomp/nibe-f2040-8/) of de [Daikin 5MWXM68A9 + EKHWET90BV3](https://cerberostech.github.io/isde-checker/warmtepomp/daikin-5mwxm68a9-ekhwet90bv3/). Liever per merk bladeren? Bekijk [alle merken op de ISDE-lijst](https://cerberostech.github.io/isde-checker/merken/).
 
 Tip van RVO: controleer **vóór de aankoop** of de warmtepomp op de lijst staat, en vraag je installateur om de meldcode in de offerte én op de factuur te zetten [3][4].
 
