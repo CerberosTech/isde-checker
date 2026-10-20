@@ -42,7 +42,7 @@ Je laat de warmtepomp eerst installeren en vraagt daarna subsidie aan, **uiterli
 
 ## Let op: wijzigingen in 2027
 
-RVO meldt dat de ISDE vanaf 1 januari 2027 op een aantal punten verandert. Controleer de actuele voorwaarden op rvo.nl als je installatie rond de jaarwisseling valt [2].
+RVO meldt dat de ISDE vanaf 1 januari 2027 op een aantal punten verandert. Controleer de actuele voorwaarden op rvo.nl als je installatie rond de jaarwisseling valt [2]. Wat er voor warmtepompen verandert en hoe de overgangsregeling werkt, lees je in [ISDE 2027 warmtepomp: wat verandert er?](isde-2027-warmtepomp-wat-verandert).
 
 ## Bronnen
 
