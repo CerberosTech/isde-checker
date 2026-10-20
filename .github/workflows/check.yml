@@ -1,0 +1,37 @@
+# Pull-request and main-branch check. Modelled on CerberosTech/deadorsupported
+# (.github/workflows/pr-check.yml, job name `check`): read-only checkout, Node 20
+# (same as .github/workflows/pages.yml), build, then the existing headless check.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci
+          elif [ -f package.json ]; then npm install
+          else echo "No package.json; the site has zero npm dependencies."
+          fi
+      - name: Build
+        run: node build.mjs
+      - name: Check site
+        run: node scripts/check-site.mjs
+      - name: Footer link count
+        run: node scripts/check-footer-links.mjs

@@ -214,10 +214,11 @@ const enFiles = files.filter(f => f.startsWith('en/') && f.endsWith('.html')), e
 if (enGc !== enFiles.length) err(`GoatCounter script on ${enGc} of ${enFiles.length} files in dist/en/`);
 // Click names: every affiliate link and every call to action carries data-goatcounter-click with a descriptive name.
 // Calls to action on this site: search buttons and example searches, the "look up your model" link on the subsidy page, the copy-meldcode button,
-// the RVO application link, the Belastingcalculator footer link.
+// the RVO application link.
+// The Belastingcalculator link in the sister-tools footer is a plain link (no click name).
 // (No newsletter, lead/offerte/vergelijker links, .ics or feeds exist; any such link would be caught by the CTA pattern below.)
 const CTA = [[/<a href="https:\/\/partner\.bol\.com\/[^"]*"[^>]*>/g, /^bol-[a-z0-9-]+$/], [/<button type="submit"[^>]*>/g, /^search-[a-z0-9-]+$/], [/<p class="try">[\s\S]*?<\/p>/g, null],
-  [/<button[^>]*data-copy=[^>]*>/g, /^copy-meldcode$/], [/(?<=<p class="note">[^<]*)<a href="\/isde-checker\/(?:en\/)?"[^>]*>/g, /^search-explain$/], [/<a href="https:\/\/www\.rvo\.nl\/subsidies-financiering\/isde"[^>]*>/g, /^rvo-isde-apply$/], [/<a href="https:\/\/cerberostech\.github\.io\/belastingcalculator\/"[^>]*>/g, /^footer-belastingcalculator$/],
+  [/<button[^>]*data-copy=[^>]*>/g, /^copy-meldcode$/], [/(?<=<p class="note">[^<]*)<a href="\/isde-checker\/(?:en\/)?"[^>]*>/g, /^search-explain$/], [/<a href="https:\/\/www\.rvo\.nl\/subsidies-financiering\/isde"[^>]*>/g, /^rvo-isde-apply$/],
   [/<a [^>]*href="[^"]*(?:\.ics|\/feed|\.rss|\.atom|offerte|vergelijk|nieuwsbrief|newsletter|daisycon)[^"]*"[^>]*>/gi, /^[a-z0-9-]+$/]];
 const clicks = { nl: new Map(), en: new Map() };
 for (const p of pages.values()) { const L = p.rel.startsWith('en/') ? 'en' : 'nl', html = p.html.replace(/<script[\s\S]*?<\/script>/g, '');
