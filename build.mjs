@@ -246,6 +246,21 @@ const brandDesc = (b, n, range, L) => { const listName = listNames[L];
   return fit(155, `${what}${range ? ` (${range})` : ''}.`, `${what}.`, fill(155, `Alle warmtepompen van {} op ${listName}, met meldcode en subsidiebedrag.`, b)); };
 
 const NAV = [['home', 'Zoeken', 'Search'], ['brands', 'Merken', 'Brands'], ['models', 'Modellen', 'Models'], ['guides', 'Gidsen', 'Guides'], ['explain', 'Uitleg', 'Subsidy'], ['about', 'Over', 'About']];
+// Plain sister-site links (no rel, no query). Same four tools on every page, in that page's language.
+const MORE_TOOLS = {
+  nl: [
+    ['https://cerberostech.github.io/stroomprijs/', 'Stroomprijs vandaag per uur'],
+    ['https://cerberostech.github.io/belastingcalculator/', 'Belastingcalculator 2026'],
+    ['https://cerberostech.github.io/woningmarkt/', 'Woningmarkt NL'],
+    ['https://cerberostech.github.io/deadorsupported/', 'DeadOrSupported: wanneer stopt de support van je apparaat'],
+  ],
+  en: [
+    ['https://cerberostech.github.io/stroomprijs/en/', 'Dutch electricity price today (hourly)'],
+    ['https://cerberostech.github.io/belastingcalculator/en/', 'Dutch tax calculator 2026'],
+    ['https://cerberostech.github.io/woningmarkt/en/', 'Dutch housing market: house prices, map and mortgage'],
+    ['https://cerberostech.github.io/deadorsupported/', 'DeadOrSupported: device support end dates'],
+  ],
+};
 // The language switch links to the same page in the other language (no redirects). Visible text: "EN" on Dutch pages, "NL" on English pages.
 const SWITCH = { nl: ['en', 'EN', 'English version'], en: ['nl', 'NL', 'Nederlandse versie'] };
 // alt: { nl, en } paths of this page in both languages. paired: false if the other path is only a fallback (no hreflang then).
@@ -266,7 +281,8 @@ const page = (L, title, desc, alt, body, { cls = '', robots = '', type = 'websit
 <a class="lang" href="${BASE}/${alt[other]}" hreflang="${other}" lang="${other}">${code}<span class="vh"> – ${name}</span></a></div></header>
 <main id="main" tabindex="-1">${body}</main>
 <footer class="site-foot"><div class="wrap"><p>${srcLine(L)}</p><p>${t('Onafhankelijke site, niet verbonden aan RVO of de Rijksoverheid.', 'Independent site, not affiliated with RVO or the Dutch government. The RVO application form is in Dutch.')}</p>
-<ul class="foot-nav"><li><a href="${BASE}/${ROUTES.brands[L]}">${t('Alle merken', 'All brands')}</a></li><li><a href="${BASE}/${ROUTES.models[L]}">${t('Alle modellen', 'All models')}</a></li><li><a href="${BASE}/${ROUTES.explain[L]}">${t('Uitleg subsidie', 'Subsidy explained')}</a></li><li><a href="${BASE}/${ROUTES.about[L]}">${t('Over ISDE-checker', 'About')}</a></li><li><a href="${BASE}/${ROUTES.disclosure[L]}">${t('Disclosure en privacy', 'Disclosure and privacy')}</a></li><li><a href="https://cerberostech.github.io/belastingcalculator/"${t('', ' hreflang="nl"')} data-goatcounter-click="footer-belastingcalculator">${t('Belastingcalculator 2026', 'Belastingcalculator 2026 (Dutch tax calculator)')}</a></li></ul></div></footer>${ANALYTICS}</body></html>`; };
+<ul class="foot-nav"><li><a href="${BASE}/${ROUTES.brands[L]}">${t('Alle merken', 'All brands')}</a></li><li><a href="${BASE}/${ROUTES.models[L]}">${t('Alle modellen', 'All models')}</a></li><li><a href="${BASE}/${ROUTES.explain[L]}">${t('Uitleg subsidie', 'Subsidy explained')}</a></li><li><a href="${BASE}/${ROUTES.about[L]}">${t('Over ISDE-checker', 'About')}</a></li><li><a href="${BASE}/${ROUTES.disclosure[L]}">${t('Disclosure en privacy', 'Disclosure and privacy')}</a></li></ul>
+<nav class="foot-more" aria-labelledby="more-tools"><h2 id="more-tools">${t('Meer gratis tools van CerberosTech', 'More free tools from CerberosTech')}</h2><ul class="foot-nav">${MORE_TOOLS[L].map(([href, label]) => `<li><a href="${href}">${label}</a></li>`).join('')}</ul></nav></div></footer>${ANALYTICS}</body></html>`; };
 
 // A list of models: the model name (with type and kW) links to the product page; meldcode as a plate; amount.
 // Brand pages group the tables by type, so there the line under the model only gives the kW.
